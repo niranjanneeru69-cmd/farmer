@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureAuth | Modern OTP System</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="auth-container">
+        <div class="auth-card" id="auth-card">
+            <!-- Step 1: Email Input -->
+            <section class="step active" id="step-email">
+                <header>
+                    <div class="logo">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L3 7V12C3 18.23 7.84 22.27 12 23C16.16 22.27 21 18.23 21 12V7L12 2Z" fill="url(#logo-gradient)" />
+                            <defs>
+                                <linearGradient id="logo-gradient" x1="3" y1="2" x2="21" y2="23" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#4F46E5" />
+                                    <stop offset="1" stop-color="#7C3AED" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h1>Welcome Back</h1>
+                    <p>Enter your email to receive a verification code</p>
+                </header>
+
+                <form id="email-form">
+                    <div class="input-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" placeholder="name@example.com" required>
+                    </div>
+                    <button type="submit" id="send-otp-btn">
+                        <span>Send Code</span>
+                        <div class="loader hidden"></div>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Step 2: OTP Input -->
+            <section class="step" id="step-otp">
+                <header>
+                    <div class="back-btn" id="go-back">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5M12 19l-7-7 7-7"/>
+                        </svg>
+                    </div>
+                    <h1>Verify Email</h1>
+                    <p id="otp-description">We've sent a 6-digit code to your email</p>
+                </header>
+
+                <form id="otp-form">
+                    <div class="otp-inputs">
+                        <input type="text" maxlength="1" pattern="\d*" class="otp-input" data-index="0">
+                        <input type="text" maxlength="1" pattern="\d*" class="otp-input" data-index="1">
+                        <input type="text" maxlength="1" pattern="\d*" class="otp-input" data-index="2">
+                        <input type="text" maxlength="1" pattern="\d*" class="otp-input" data-index="3">
+                        <input type="text" maxlength="1" pattern="\d*" class="otp-input" data-index="4">
+                        <input type="text" maxlength="1" pattern="\d*" class="otp-input" data-index="5">
+                    </div>
+                    <button type="submit" id="verify-otp-btn">
+                        <span>Verify & Login</span>
+                        <div class="loader hidden"></div>
+                    </button>
+                    <div class="resend-container">
+                        <p>Didn't receive code? <button type="button" id="resend-btn">Resend</button></p>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Step 3: Success -->
+            <section class="step" id="step-success">
+                <div class="success-icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </div>
+                <h1>Login Successful</h1>
+                <p>Welcome to your secure dashboard. You are now authenticated.</p>
+                <button type="button" onclick="location.reload()">Back to Home</button>
+            </section>
+        </div>
+
+        <div id="toast-container"></div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
