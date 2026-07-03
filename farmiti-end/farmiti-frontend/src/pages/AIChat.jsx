@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { useAuth } from '../context/AuthContext'
 import { chatAPI } from '../api/services'
+import { API_BASE_URL } from '../api/client'
 import { Send, Bot, User, Trash2, Lightbulb, Copy, Globe, Leaf, Volume2, VolumeX, Square, Mic, MicOff, Edit2 } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
 
@@ -25,7 +26,7 @@ export default function AIChat() {
   const inputRef = useRef()
   
   const avatarSrc = farmer?.avatar_url
-    ? (farmer.avatar_url.startsWith('/uploads') ? `http://localhost:8000${farmer.avatar_url}` : farmer.avatar_url)
+    ? (farmer.avatar_url.startsWith('/uploads') ? `${API_BASE_URL}${farmer.avatar_url}` : farmer.avatar_url)
     : null
 
   const SUGGESTIONS = [

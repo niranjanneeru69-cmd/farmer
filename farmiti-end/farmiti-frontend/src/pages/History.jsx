@@ -3,6 +3,7 @@ import { useLang } from '../context/LanguageContext'
 import { historyAPI } from '../api/services'
 import { Sprout, ScanSearch, FileText, CloudSun, Clock, ChevronRight, Filter, Trash2, RefreshCcw, AlertTriangle, CheckCircle, Target, ShieldCheck, Zap } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
+import { API_BASE_URL } from '../api/client'
 
 const TYPE_CFG = {
   crop_recommendation: { label: 'Crop Recommendation', icon: Sprout, color: 'bg-green-50 text-green-600 border-green-200', dot: 'bg-green-500' },
@@ -238,7 +239,7 @@ export default function History() {
                       <div className="space-y-6">
                         <div className="bg-white border border-red-100 rounded-[2rem] overflow-hidden shadow-sm">
                            <div className="flex flex-col md:flex-row items-stretch">
-                             {item.image_url && <img src={`http://localhost:8000${item.image_url}`} className="md:w-48 object-cover border-r border-red-50" alt="" />}
+                             {item.image_url && <img src={`${API_BASE_URL}${item.image_url}`} className="md:w-48 object-cover border-r border-red-50" alt="" />}
                              <div className="p-5 flex-1 space-y-3">
                                <div className="flex items-center justify-between">
                                  <div>

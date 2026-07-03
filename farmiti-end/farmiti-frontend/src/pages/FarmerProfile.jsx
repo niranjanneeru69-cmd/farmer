@@ -9,6 +9,7 @@ import { User, Tractor, Droplets, Edit3, Save, Camera, CheckCircle, Plus, Trash2
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ConfirmModal from '../components/ConfirmModal'
+import { API_BASE_URL } from '../api/client'
 
 const STATES = ['Andhra Pradesh', 'Bihar', 'Gujarat', 'Haryana', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Punjab', 'Rajasthan', 'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'West Bengal', 'Odisha', 'Assam']
 const LANGS = [{ c: 'en', n: 'English' }, { c: 'hi', n: 'हिन्दी' }, { c: 'ta', n: 'தமிழ்' }, { c: 'te', n: 'తెలుగు' }, { c: 'kn', n: 'ಕನ್ನಡ' }, { c: 'ml', n: 'മലയാളം' }, { c: 'mr', n: 'मराठी' }, { c: 'pa', n: 'ਪੰਜਾਬੀ' }, { c: 'bn', n: 'বাংলা' }, { c: 'gu', n: 'ગુજરાતી' }, { c: 'or', n: 'ଓଡ଼ିଆ' }, { c: 'ur', n: 'اردو' }]
@@ -77,7 +78,7 @@ export default function FarmerProfile() {
   }
 
   const u = (k, v) => setProfile(p => ({ ...p, [k]: v }))
-  const avatarSrc = profile?.avatar_url ? (profile.avatar_url.startsWith('/uploads') ? `http://localhost:8000${profile.avatar_url}` : profile.avatar_url) : null
+  const avatarSrc = profile?.avatar_url ? (profile.avatar_url.startsWith('/uploads') ? `${API_BASE_URL}${profile.avatar_url}` : profile.avatar_url) : null
 
   const MENU_ITEMS = [
     { id: 'profile', label: t('profile'), icon: User },

@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, History
 } from 'lucide-react'
 import Logo from './Logo'
+import { API_BASE_URL } from '../api/client'
 
 export default function Sidebar({ open, setOpen }) {
   const { farmer, logout } = useAuth()
@@ -28,7 +29,7 @@ export default function Sidebar({ open, setOpen }) {
   ]
 
   const avatarSrc = farmer?.avatar_url
-    ? (farmer.avatar_url.startsWith('/uploads') ? `http://localhost:8000${farmer.avatar_url}` : farmer.avatar_url)
+    ? (farmer.avatar_url.startsWith('/uploads') ? `${API_BASE_URL}${farmer.avatar_url}` : farmer.avatar_url)
     : null
 
   return (

@@ -6,6 +6,7 @@ import { notificationAPI } from '../api/services'
 import { Search, Bell, Settings, LogOut, Check, Globe, ChevronDown, MessageSquareText, ScanSearch, FileText, History, Users, Calendar as CalendarIcon, Trash2, CheckCircle, HelpCircle, X } from 'lucide-react'
 import { useToast } from '../context/ToastContext'
 import Logo from './Logo'
+import { API_BASE_URL } from '../api/client'
 
 export default function TopBar() {
   const { farmer, logout } = useAuth()
@@ -99,7 +100,7 @@ export default function TopBar() {
   }
 
   const avatarSrc = farmer?.avatar_url
-    ? (farmer.avatar_url.startsWith('/uploads') ? `http://localhost:8000${farmer.avatar_url}` : farmer.avatar_url)
+    ? (farmer.avatar_url.startsWith('/uploads') ? `${API_BASE_URL}${farmer.avatar_url}` : farmer.avatar_url)
     : null
 
   const LINKS = [
