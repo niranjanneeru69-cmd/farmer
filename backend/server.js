@@ -11,16 +11,25 @@ const { pool } = require('./db/connection')
 // ── Startup diagnostics ────────────────────────────────────────────────────
 const checkEnv = () => {
   const checks = {
-    'MySQL DB':      process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER,
-    'JWT Secret':    process.env.JWT_SECRET && process.env.JWT_SECRET !== 'farmiti_super_secret_key_change_this_2025',
-    'Gemini AI':     process.env.GEMINI_API_KEYS && process.env.GEMINI_API_KEYS !== 'your_gemini_api_key_here',
-    'Grok AI':       process.env.GROK_API_KEYS && process.env.GROK_API_KEYS !== 'your_grok_api_key_here',
-    'OpenWeather':   process.env.OPENWEATHER_API_KEY && process.env.OPENWEATHER_API_KEY !== 'your_openweathermap_api_key_here',
+    'DB_HOST':             process.env.DB_HOST,
+    'DB_PORT':             process.env.DB_PORT,
+    'DB_NAME':             process.env.DB_NAME,
+    'DB_USER':             process.env.DB_USER,
+    'DB_PASSWORD':         process.env.DB_PASSWORD,
+    'EMAIL_USER':          process.env.EMAIL_USER,
+    'EMAIL_PASS':          process.env.EMAIL_PASS,
+    'GEMINI_API_KEYS':     process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY,
+    'JWT_SECRET':          process.env.JWT_SECRET,
+    'OPENWEATHER_API_KEY': process.env.OPENWEATHER_API_KEY,
+    'FRONTEND_URL':        process.env.FRONTEND_URL,
+    'CLIENT_URL':          process.env.CLIENT_URL,
+    'BACKEND_URL':         process.env.BACKEND_URL,
   }
   console.log('\n📋 Environment Check:')
-  Object.entries(checks).forEach(([k, ok]) =>
-    console.log(`   ${ok ? '✅' : '❌'} ${k}${ok ? '' : ' — NOT configured (check .env)'}`)
-  )
+  Object.entries(checks).forEach(([k, val]) => {
+    const isConfigured = val && val !== 'your_gemini_api_key_here' && val !== 'your_grok_api_key_here' && val !== 'your_openweathermap_api_key_here' && val !== 'farmiti_super_secret_key_change_this_2025'
+    console.log(`   ${isConfigured ? '✅' : '❌'} ${k}${isConfigured ? '' : ' — NOT configured (check .env)'}`)
+  })
   console.log('')
 }
 checkEnv()
@@ -54,19 +63,21 @@ app.use(compression())
 
 // CORS — allow frontend origin
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-]
+  "http://localhost:5173",
+  "https://farmiti-frontend.onrender.com",
+  process.env.FRONTEND_URL,
+  process.env.CLIENT_URL
+].filter(Boolean)
+
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, Postman)
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true)
-    callback(new Error(`CORS: Origin ${origin} not allowed`))
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error(`CORS: Origin ${origin} not allowed`))
+    }
   },
-  credentials: true,
+  credentials: true
 }))
 
 app.use(express.json({ limit: '50mb' }))

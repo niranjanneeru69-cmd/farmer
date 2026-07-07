@@ -6,12 +6,19 @@ const { query, transaction } = require('../db/connection')
 const { saveOTP, verifyOTP } = require('../utils/otpStore')
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  }
+})
+
+// Verify transporter before sending
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error("❌ Nodemailer transporter connection error:", error)
+  } else {
+    console.log("✅ Nodemailer transporter is ready to send emails")
   }
 })
 
@@ -174,10 +181,12 @@ const sendOTP = async (req, res) => {
       `
     }
 
+    console.log("Sending OTP to:", email)
     await transporter.sendMail(mailOptions)
+    console.log("OTP sent successfully")
     res.json({ message: 'OTP sent successfully to your email' })
   } catch (err) {
-    console.error('Send OTP error:', err)
+    console.error(err) // TASK 3: Print exact error, do not swallow
     res.status(500).json({ error: 'Failed to send OTP. Please check your email and try again.' })
   }
 }
