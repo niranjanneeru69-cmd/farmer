@@ -1,8 +1,8 @@
 require('dotenv').config()
 const express = require('express')
-const cors    = require('cors')
-const path    = require('path')
-const helmet  = require('helmet')
+const cors = require('cors')
+const path = require('path')
+const helmet = require('helmet')
 const compression = require('compression')
 const rateLimit = require('express-rate-limit')
 const morgan = require('morgan')
@@ -11,19 +11,19 @@ const { pool } = require('./db/connection')
 // ── Startup diagnostics ────────────────────────────────────────────────────
 const checkEnv = () => {
   const checks = {
-    'DB_HOST':             process.env.DB_HOST,
-    'DB_PORT':             process.env.DB_PORT,
-    'DB_NAME':             process.env.DB_NAME,
-    'DB_USER':             process.env.DB_USER,
-    'DB_PASSWORD':         process.env.DB_PASSWORD,
-    'EMAIL_USER':          process.env.EMAIL_USER,
-    'EMAIL_PASS':          process.env.EMAIL_PASS,
-    'GEMINI_API_KEYS':     process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY,
-    'JWT_SECRET':          process.env.JWT_SECRET,
+    'DB_HOST': process.env.DB_HOST,
+    'DB_PORT': process.env.DB_PORT,
+    'DB_NAME': process.env.DB_NAME,
+    'DB_USER': process.env.DB_USER,
+    'DB_PASSWORD': process.env.DB_PASSWORD,
+    'EMAIL_USER': process.env.EMAIL_USER,
+    'EMAIL_PASS': process.env.EMAIL_PASS,
+    'GEMINI_API_KEYS': process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY,
+    'JWT_SECRET': process.env.JWT_SECRET,
     'OPENWEATHER_API_KEY': process.env.OPENWEATHER_API_KEY,
-    'FRONTEND_URL':        process.env.FRONTEND_URL,
-    'CLIENT_URL':          process.env.CLIENT_URL,
-    'BACKEND_URL':         process.env.BACKEND_URL,
+    'FRONTEND_URL': process.env.FRONTEND_URL,
+    'CLIENT_URL': process.env.CLIENT_URL,
+    'BACKEND_URL': process.env.BACKEND_URL,
   }
   console.log('\n📋 Environment Check:')
   Object.entries(checks).forEach(([k, val]) => {
@@ -69,16 +69,17 @@ const allowedOrigins = [
   process.env.CLIENT_URL
 ].filter(Boolean)
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true)
-    } else {
-      callback(new Error(`CORS: Origin ${origin} not allowed`))
-    }
-  },
-  credentials: true
-}))
+// app.use(cors({
+//   origin(origin, callback) {
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true)
+//     } else {
+//       callback(new Error(`CORS: Origin ${origin} not allowed`))
+//     }
+//   },
+//   credentials: true
+// }))
+app.use(cors({ origin: true, credentials: true }));
 
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ extended: true, limit: '50mb' }))
@@ -116,17 +117,17 @@ app.get('/health', (_, res) => {
 })
 
 // ── API Routes ─────────────────────────────────────────────────────────────
-app.use('/api/auth',          require('./routes/auth'))
-app.use('/api/farmer',        require('./routes/farmer'))
-app.use('/api/weather',       require('./routes/weather'))
-app.use('/api/market',        require('./routes/market'))
-app.use('/api/crops',         require('./routes/crops'))
-app.use('/api/disease',       require('./routes/disease'))
-app.use('/api/schemes',       require('./routes/schemes'))
-app.use('/api/chat',          require('./routes/chat'))
+app.use('/api/auth', require('./routes/auth'))
+app.use('/api/farmer', require('./routes/farmer'))
+app.use('/api/weather', require('./routes/weather'))
+app.use('/api/market', require('./routes/market'))
+app.use('/api/crops', require('./routes/crops'))
+app.use('/api/disease', require('./routes/disease'))
+app.use('/api/schemes', require('./routes/schemes'))
+app.use('/api/chat', require('./routes/chat'))
 app.use('/api/notifications', require('./routes/notifications'))
-app.use('/api/history',       require('./routes/history'))
-app.use('/api/calendar',      require('./routes/calendar'))
+app.use('/api/history', require('./routes/history'))
+app.use('/api/calendar', require('./routes/calendar'))
 
 // ── Public Pincode Lookup (no auth needed) ─────────────────────────────────
 const fetch = require('node-fetch')
@@ -144,7 +145,7 @@ app.get('/api/pincode/:pin', async (req, res) => {
     if (data[0]?.Status === 'Success' && data[0]?.PostOffice?.length) {
       const offices = data[0].PostOffice
       const po = offices[0]
-      
+
       const clean = (val) => {
         if (!val || val.toLowerCase() === 'n.a.' || val.toLowerCase() === 'not applicable' || val.toLowerCase() === 'na') return ''
         return val.trim()
@@ -162,9 +163,9 @@ app.get('/api/pincode/:pin', async (req, res) => {
         city: city,
         village: clean(po.Name),
         region: clean(po.Region),
-        all_offices: offices.map(o => ({ 
-          name: clean(o.Name), 
-          block: clean(o.Block), 
+        all_offices: offices.map(o => ({
+          name: clean(o.Name),
+          block: clean(o.Block),
           division: clean(o.Division),
           district: clean(o.District)
         }))
@@ -211,14 +212,14 @@ const cronInterval = setInterval(() => {
 
 // Detailed Diagnostic Health Check
 app.get('/api/health', (_, res) => {
-  const geminiOk    = !!(process.env.GEMINI_API_KEYS && process.env.GEMINI_API_KEYS !== 'your_gemini_api_key_here')
-  const grokOk      = !!(process.env.GROK_API_KEYS && process.env.GROK_API_KEYS !== 'your_grok_api_key_here')
+  const geminiOk = !!(process.env.GEMINI_API_KEYS && process.env.GEMINI_API_KEYS !== 'your_gemini_api_key_here')
+  const grokOk = !!(process.env.GROK_API_KEYS && process.env.GROK_API_KEYS !== 'your_grok_api_key_here')
   res.json({
-    status:   'OK',
-    app:      'Farmiti v2',
-    db:       'MySQL',
-    ai:       geminiOk   ? '✅ Gemini AI connected'       : '❌ Add GEMINI_API_KEYS to .env',
-    grok:     grokOk     ? '✅ Grok AI configured'         : '❌ Add GROK_API_KEYS to .env',
+    status: 'OK',
+    app: 'Farmiti v2',
+    db: 'MySQL',
+    ai: geminiOk ? '✅ Gemini AI connected' : '❌ Add GEMINI_API_KEYS to .env',
+    grok: grokOk ? '✅ Grok AI configured' : '❌ Add GROK_API_KEYS to .env',
   })
 })
 
@@ -241,9 +242,9 @@ const server = app.listen(PORT, () => {
 // Graceful Shutdown Handling (prevents data corruption and handles redeployments cleanly)
 const gracefulShutdown = (signal) => {
   console.log(`\n🛑 Received ${signal}. Starting graceful shutdown of FARMNITI backend...`)
-  
+
   clearInterval(cronInterval)
-  
+
   server.close(async () => {
     console.log('✔ Express HTTP server closed. No longer accepting new requests.')
     try {
@@ -256,7 +257,7 @@ const gracefulShutdown = (signal) => {
       process.exit(1)
     }
   })
-  
+
   // Timeout fallback
   setTimeout(() => {
     console.error('⚠️ Force shutdown initiated. Connections hung.')
