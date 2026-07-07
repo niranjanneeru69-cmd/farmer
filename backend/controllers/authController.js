@@ -6,12 +6,15 @@ const { query, transaction } = require('../db/connection')
 const { saveOTP, verifyOTP } = require('../utils/otpStore')
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  family: 4,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   }
-})
+});
 
 // Verify transporter before sending
 transporter.verify(function (error, success) {
@@ -28,7 +31,7 @@ const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expires
 const register = async (req, res) => {
   try {
     const { name, phone, password, email, otp, state, district, village, city, pincode,
-            land_size, land_type, soil_type, water_source, primary_crop, language_pref } = req.body
+      land_size, land_type, soil_type, water_source, primary_crop, language_pref } = req.body
 
     if (!name || !phone || !password || !email || !otp) {
       return res.status(400).json({ error: 'Name, phone, password, email, and OTP are required' })
@@ -54,7 +57,7 @@ const register = async (req, res) => {
         // Try Pincode first
         let geoUrl = `http://api.openweathermap.org/geo/1.0/zip?zip=${pincode},IN&appid=${apiKey}`
         let geoRes = await axios.get(geoUrl).catch(() => null)
-        
+
         if (!geoRes || !geoRes.data || !geoRes.data.lat) {
           // Fallback to City
           geoUrl = `http://api.openweathermap.org/geo/1.0/direct?q=${city || village},${state},IN&limit=1&appid=${apiKey}`
@@ -75,13 +78,13 @@ const register = async (req, res) => {
     const farmer = await transaction(async (client) => {
       const res1 = await client.query(
         'INSERT INTO farmers (name, phone, email, password_hash, state, district, village, pincode, language_pref) VALUES (?,?,?,?,?,?,?,?,?)',
-        [name, phone, email||null, password_hash, state||'Tamil Nadu', district||null, village||city||null, pincode||null, language_pref||'en']
+        [name, phone, email || null, password_hash, state || 'Tamil Nadu', district || null, village || city || null, pincode || null, language_pref || 'en']
       )
       const farmerId = res1.insertId
 
       await client.query(
         'INSERT INTO farm_details (farmer_id, land_size, land_type, soil_type, water_source, primary_crop, latitude, longitude) VALUES (?,?,?,?,?,?,?,?)',
-        [farmerId, land_size||null, land_type||null, soil_type||null, water_source||null, primary_crop||null, latitude, longitude]
+        [farmerId, land_size || null, land_type || null, soil_type || null, water_source || null, primary_crop || null, latitude, longitude]
       )
 
       // Welcome notification
