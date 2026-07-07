@@ -3,12 +3,15 @@ const nodemailer = require('nodemailer')
 const fetch = require('node-fetch')
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  family: 4,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   }
-})
+});
 
 // Verify transporter before sending
 transporter.verify(function (error, success) {
@@ -35,16 +38,16 @@ exports.getEvents = async (req, res) => {
 
     const formatted = rows.map(e => {
       if (!e.event_date) return null;
-      
+
       const d = new Date(e.event_date);
       if (isNaN(d.getTime())) return null;
-      
+
       // Use local date parts to avoid UTC timezone shifts with toISOString()
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
       const dateStr = `${yyyy}-${mm}-${dd}`;
-      
+
       return {
         id: e.id,
         title: e.title,
@@ -114,7 +117,7 @@ exports.deleteEvent = async (req, res) => {
   try {
     const result = await query('DELETE FROM calendar_events WHERE id = ? AND farmer_id = ?', [req.params.id, req.farmer.id])
     if ((result.affectedRows || 0) === 0) return res.status(403).json({ error: 'Unauthorized or event not found' })
-      
+
     res.json({ message: 'Event deleted' })
   } catch (err) {
     console.error(err)
@@ -180,7 +183,7 @@ exports.processReminders = async () => {
             const apiKey = (process.env.OPENWEATHER_API_KEY || '').trim()
             if (apiKey) {
               const q = encodeURIComponent(row.district || row.state || 'Chennai,IN')
-              const wRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${q}&appid=${apiKey}&units=metric`).catch(()=>null)
+              const wRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${q}&appid=${apiKey}&units=metric`).catch(() => null)
               if (wRes && wRes.ok) {
                 const wData = await wRes.json()
                 weatherAlertStr = `Current weather in ${wData.name || 'your area'}: ${Math.round(wData.main.temp)}°C, ${wData.weather[0]?.description}.`
