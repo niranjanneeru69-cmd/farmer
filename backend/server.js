@@ -2,6 +2,11 @@ require('dotenv').config()
 const express = require('express')
 const cors    = require('cors')
 const path    = require('path')
+const helmet  = require('helmet')
+const compression = require('compression')
+const rateLimit = require('express-rate-limit')
+const morgan = require('morgan')
+const { pool } = require('./db/connection')
 
 // ── Startup diagnostics ────────────────────────────────────────────────────
 const checkEnv = () => {
@@ -23,6 +28,30 @@ checkEnv()
 
 const app = express()
 
+// Trust reverse proxy for correct client IP detection, secure cookies, and rate limiting
+app.set("trust proxy", 1)
+
+// Morgan logging based on environment
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
+
+// Security Headers (configured to allow cross-origin requests for uploads)
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}))
+
+// Rate Limiting (DDoS prevention)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests from this IP, please try again after 15 minutes' }
+})
+app.use('/api/', apiLimiter)
+
+// Response compression for better performance
+app.use(compression())
+
 // CORS — allow frontend origin
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -43,8 +72,37 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 
-// Serve uploaded images
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+// Simple, dependency-free HTML/script sanitization to prevent XSS injection
+const sanitizeInput = (val) => {
+  if (typeof val === 'string') {
+    return val.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '').trim()
+  }
+  if (typeof val === 'object' && val !== null) {
+    for (const key in val) {
+      val[key] = sanitizeInput(val[key])
+    }
+  }
+  return val
+}
+app.use((req, res, next) => {
+  if (req.body) req.body = sanitizeInput(req.body)
+  if (req.query) req.query = sanitizeInput(req.query)
+  next()
+})
+
+// Serve uploaded images with static asset caching
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '1d',
+  etag: true,
+}))
+
+// ── Lightweight Health Check Endpoint (Render monitoring) ─────────────────
+app.get('/health', (_, res) => {
+  res.status(200).json({
+    status: 'ok',
+    message: 'FARMNITI Backend is running'
+  })
+})
 
 // ── API Routes ─────────────────────────────────────────────────────────────
 app.use('/api/auth',          require('./routes/auth'))
@@ -136,15 +194,14 @@ app.get('/api/pincode/:pin', async (req, res) => {
 // ── Background Cron Jobs (Reminders) ──────────────────────────────────────
 const calendarController = require('./controllers/calendar')
 // Checks the DB every minute for due calendar reminders
-setInterval(() => {
+const cronInterval = setInterval(() => {
   calendarController.processReminders().catch(err => console.error(err))
 }, 60 * 1000)
 
-// Health check — shows API key status without exposing actual keys
+// Detailed Diagnostic Health Check
 app.get('/api/health', (_, res) => {
   const geminiOk    = !!(process.env.GEMINI_API_KEYS && process.env.GEMINI_API_KEYS !== 'your_gemini_api_key_here')
   const grokOk      = !!(process.env.GROK_API_KEYS && process.env.GROK_API_KEYS !== 'your_grok_api_key_here')
-  const weatherOk   = !!(process.env.OPENWEATHER_API_KEY && process.env.OPENWEATHER_API_KEY !== 'your_openweathermap_api_key_here')
   res.json({
     status:   'OK',
     app:      'Farmiti v2',
@@ -164,8 +221,37 @@ app.use((err, req, res, next) => {
 })
 
 const PORT = process.env.PORT || 8000
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🌱 Farmiti v2 API  →  http://localhost:${PORT}`)
   console.log(`🗄️  DB: MySQL  |  🤖 AI: Gemini  |  🌤️  Weather: OpenWeatherMap`)
-  console.log(`\n🔗 Test health:  http://localhost:${PORT}/api/health\n`)
+  console.log(`\n🔗 Test health:  http://localhost:${PORT}/health\n`)
 })
+
+// Graceful Shutdown Handling (prevents data corruption and handles redeployments cleanly)
+const gracefulShutdown = (signal) => {
+  console.log(`\n🛑 Received ${signal}. Starting graceful shutdown of FARMNITI backend...`)
+  
+  clearInterval(cronInterval)
+  
+  server.close(async () => {
+    console.log('✔ Express HTTP server closed. No longer accepting new requests.')
+    try {
+      await pool.end()
+      console.log('✔ Database connection pool drained and closed successfully.')
+      console.log('👋 Clean shutdown completed.')
+      process.exit(0)
+    } catch (err) {
+      console.error('❌ Error closing database pool during shutdown:', err.message)
+      process.exit(1)
+    }
+  })
+  
+  // Timeout fallback
+  setTimeout(() => {
+    console.error('⚠️ Force shutdown initiated. Connections hung.')
+    process.exit(1)
+  }, 10000)
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))

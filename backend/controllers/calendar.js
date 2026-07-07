@@ -214,7 +214,7 @@ exports.processReminders = async () => {
                       </div>
                       
                       <div style="margin-top: 35px; text-align: center;">
-                        <a href="http://localhost:5173/calendar" style="background-color: #1A5C38; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 50px; font-weight: bold; display: inline-block; font-size: 15px; box-shadow: 0 4px 6px rgba(26,92,56,0.2);">Open in Farmiti</a>
+                        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/calendar" style="background-color: #1A5C38; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 50px; font-weight: bold; display: inline-block; font-size: 15px; box-shadow: 0 4px 6px rgba(26,92,56,0.2);">Open in Farmiti</a>
                       </div>
                     </div>
                     

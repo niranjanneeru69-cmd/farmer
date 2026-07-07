@@ -1,6 +1,7 @@
 const { query, transaction } = require('../db/connection')
 const fs = require('fs')
 const path = require('path')
+const { uploadImage, deleteImage, isCloudinaryConfigured } = require('../utils/cloudinary')
 
 // GET /api/farmer/profile
 const getProfile = async (req, res) => {
@@ -86,17 +87,40 @@ const updateAvatar = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' })
 
-    // Delete old avatar if exists
     const old = await query('SELECT avatar_url FROM farmers WHERE id=?', [req.farmer.id])
-    if (old.rows[0]?.avatar_url) {
-      const oldPath = path.join(__dirname, '..', old.rows[0].avatar_url)
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath)
+    const oldUrl = old.rows[0]?.avatar_url
+    
+    let avatarUrl = `/uploads/avatars/${req.file.filename}`
+    const localFilePath = req.file.path
+
+    if (isCloudinaryConfigured()) {
+      try {
+        console.log('☁️ Uploading avatar to Cloudinary...')
+        const cloudinaryUrl = await uploadImage(localFilePath, 'farmiti/avatars')
+        if (cloudinaryUrl) {
+          avatarUrl = cloudinaryUrl
+          // Delete old avatar from Cloudinary if it was stored there
+          if (oldUrl) {
+            await deleteImage(oldUrl)
+          }
+          // Remove local file
+          if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath)
+        }
+      } catch (cloudinaryErr) {
+        console.error('⚠️ Cloudinary upload failed, falling back to local storage:', cloudinaryErr.message)
+      }
+    } else {
+      // Local storage fallback: delete old local file if exists
+      if (oldUrl && oldUrl.startsWith('/uploads')) {
+        const oldPath = path.join(__dirname, '..', oldUrl)
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath)
+      }
     }
 
-    const avatarUrl = `/uploads/avatars/${req.file.filename}`
     await query('UPDATE farmers SET avatar_url=? WHERE id=?', [avatarUrl, req.farmer.id])
     res.json({ message: 'Profile photo updated', avatar_url: avatarUrl })
   } catch (err) {
+    console.error('❌ Update avatar error:', err.message)
     res.status(500).json({ error: 'Failed to update photo' })
   }
 }
@@ -105,13 +129,19 @@ const updateAvatar = async (req, res) => {
 const deleteAvatar = async (req, res) => {
   try {
     const old = await query('SELECT avatar_url FROM farmers WHERE id=?', [req.farmer.id])
-    if (old.rows[0]?.avatar_url) {
-      const oldPath = path.join(__dirname, '..', old.rows[0].avatar_url)
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath)
+    const oldUrl = old.rows[0]?.avatar_url
+    if (oldUrl) {
+      if (oldUrl.startsWith('/uploads')) {
+        const oldPath = path.join(__dirname, '..', oldUrl)
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath)
+      } else {
+        await deleteImage(oldUrl)
+      }
     }
     await query('UPDATE farmers SET avatar_url=NULL WHERE id=?', [req.farmer.id])
     res.json({ message: 'Profile photo removed' })
   } catch (err) {
+    console.error('❌ Delete avatar error:', err.message)
     res.status(500).json({ error: 'Failed to delete photo' })
   }
 }

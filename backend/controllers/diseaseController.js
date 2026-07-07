@@ -2,6 +2,7 @@ const { query } = require('../db/connection')
 const { analyzeImage, getGenAI, getGrokKey } = require('./geminiHelper')
 const path = require('path')
 const fs = require('fs')
+const { uploadImage, isCloudinaryConfigured } = require('../utils/cloudinary')
 
 const DISEASE_PROMPT = (lang) => `You are an expert agricultural plant pathologist. Analyze this crop/plant image carefully.
 
@@ -43,12 +44,28 @@ If YES it is a crop/plant image, respond with ONLY this JSON (no markdown, no co
 
 // POST /api/disease/detect
 const detectDisease = async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'Please upload a crop image' })
+  if (!req.file) return res.status(400).json({ error: 'Please upload a crop image' })
 
-    const image_url = `/uploads/disease/${req.file.filename}`
-    const imagePath = req.file.path
+  const localFilePath = req.file.path
+  let image_url = `/uploads/disease/${req.file.filename}`
+  let cloudinaryUploaded = false
+
+  try {
     const lang = req.farmer?.language_pref || 'en'
+
+    // If Cloudinary is configured, upload to Cloudinary
+    if (isCloudinaryConfigured()) {
+      try {
+        console.log('☁️ Uploading disease image to Cloudinary...')
+        const cloudinaryUrl = await uploadImage(localFilePath, 'farmiti/disease')
+        if (cloudinaryUrl) {
+          image_url = cloudinaryUrl
+          cloudinaryUploaded = true
+        }
+      } catch (cloudinaryErr) {
+        console.error('⚠️ Cloudinary upload failed, falling back to local serving:', cloudinaryErr.message)
+      }
+    }
 
     let analysisResult
     let aiProvider = null
@@ -57,12 +74,12 @@ const detectDisease = async (req, res) => {
     const aiAvailable = geminiAvailable || grokAvailable
 
     if (!aiAvailable) {
-      console.warn('⚠️  No AI keys configured — using mock disease analysis')
+      console.warn('⚠️ No AI keys configured — using mock disease analysis')
       analysisResult = getMockAnalysis(req.body.crop_name)
     } else {
       try {
         console.log('🔬 Analyzing crop image with AI Vision (Gemini primary, Grok fallback)...')
-        const aiResult = await analyzeImage(imagePath, DISEASE_PROMPT(lang))
+        const aiResult = await analyzeImage(localFilePath, DISEASE_PROMPT(lang))
         const raw = aiResult.text
         const provider = aiResult.provider || (geminiAvailable ? 'Gemini' : 'Grok')
 
@@ -91,6 +108,10 @@ const detectDisease = async (req, res) => {
 
     // If not a crop image, return early without saving
     if (!analysisResult.is_crop_image) {
+      // Cleanup the local file if it was uploaded to Cloudinary
+      if (cloudinaryUploaded && fs.existsSync(localFilePath)) {
+        try { fs.unlinkSync(localFilePath) } catch (e) {}
+      }
       return res.json({
         is_crop_image: false,
         message: analysisResult.message,
@@ -131,6 +152,16 @@ const detectDisease = async (req, res) => {
       ]
     )
 
+    // Cleanup local file if it was successfully uploaded to Cloudinary
+    if (cloudinaryUploaded && fs.existsSync(localFilePath)) {
+      try {
+        fs.unlinkSync(localFilePath)
+        console.log('🧹 Cleaned up temporary local image file')
+      } catch (unlinkErr) {
+        console.error('Failed to delete temporary local file:', unlinkErr.message)
+      }
+    }
+
     res.json({
       detection_id: ins.insertId,
       created_at: row.rows[0]?.created_at,
@@ -141,6 +172,10 @@ const detectDisease = async (req, res) => {
     })
   } catch (err) {
     console.error('❌ detectDisease error:', err)
+    // Cleanup local file on error if it was uploaded to Cloudinary
+    if (cloudinaryUploaded && fs.existsSync(localFilePath)) {
+      try { fs.unlinkSync(localFilePath) } catch (e) {}
+    }
     res.status(500).json({ error: 'Detection failed. Please try again.' })
   }
 }

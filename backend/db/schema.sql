@@ -58,6 +58,9 @@ CREATE TABLE farm_details (
   account_no   VARCHAR(30),
   ifsc         VARCHAR(20),
   aadhaar      VARCHAR(20),
+  latitude     DECIMAL(10,8),
+  longitude    DECIMAL(11,8),
+  soil_report  JSON,
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (farmer_id) REFERENCES farmers(id) ON DELETE CASCADE
